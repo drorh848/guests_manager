@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ניהול מוזמנים | חינה חמרי</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Hebrew:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #c9963a;
+    --gold-light: #e8c06a;
+    --gold-dark: #8a6020;
+    --deep: #1a0e05;
+    --warm: #2d1a08;
+    --cream: #fdf6e8;
+    --henna: #7a2e0e;
+    --henna-light: #c4622d;
+    --success: #27ae60;
+    --danger: #e74c3c;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Serif Hebrew', serif;
+    background: var(--deep);
+    color: var(--cream);
+    min-height: 100vh;
+  }
+
+  .bg {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 20%, rgba(201,150,58,0.07) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(122,46,14,0.1) 0%, transparent 50%),
+                var(--deep);
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 24px 16px;
+  }
+
+  /* ===== PAGES ===== */
+  .page { display: none; }
+  .page.active { display: block; animation: fadeIn 0.4s ease; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ===== HEADER ===== */
+  .app-header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  .app-title {
+    font-size: 22px;
+    color: var(--gold-light);
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .app-subtitle {
+    font-size: 12px;
+    color: rgba(253,246,232,0.4);
+    letter-spacing: 2px;
+  }
+
+  .user-badge {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 6px 16px;
+    background: rgba(201,150,58,0.15);
+    border: 1px solid rgba(201,150,58,0.3);
+    border-radius: 20px;
+    font-size: 13px;
+    color: var(--gold-light);
+  }
+
+  .gold-line {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 16px 0;
+  }
+
+  /* ===== FORM ELEMENTS ===== */
+  .form-group { margin-bottom: 16px; }
+
+  .form-label {
+    display: block;
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 13px 16px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(201,150,58,0.3);
+    border-radius: 3px;
+    color: var(--cream);
+    font-family: 'Noto Serif Hebrew', serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-input:focus {
+    border-color: var(--gold);
+    background: rgba(201,150,58,0.06);
+  }
+
+  .form-input::placeholder { color: rgba(253,246,232,0.25); }
+
+  /* ===== BUTTONS ===== */
+  .btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 3px;
+    font-family: 'Noto Serif Hebrew', serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+
+  .btn-gold {
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+    color: var(--deep);
+    box-shadow: 0 4px 15px rgba(201,150,58,0.3);
+  }
+
+  .btn-gold:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(201,150,58,0.4); }
+
+  .btn-henna {
+    background: linear-gradient(135deg, var(--henna), var(--henna-light));
+    color: var(--cream);
+    box-shadow: 0 4px 15px rgba(122,46,14,0.3);
+  }
+
+  .btn-henna:hover { transform: translateY(-1px); }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid rgba(201,150,58,0.3);
+    color: rgba(253,246,232,0.5);
+    font-size: 13px;
+    padding: 10px;
+  }
+
+  .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+  .btn-success {
+    background: linear-gradient(135deg, #1e8449, var(--success));
+    color: white;
+    box-shadow: 0 4px 15px rgba(39,174,96,0.3);
+  }
+
+  .btn-danger {
+    background: transparent;
+    border: 1px solid rgba(231,76,60,0.4);
+    color: rgba(231,76,60,0.7);
+    font-size: 12px;
+    padding: 6px 12px;
+    width: auto;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: 'Noto Serif Hebrew', serif;
+    transition: all 0.2s;
+  }
+
+  .btn-danger:hover { background: rgba(231,76,60,0.1); color: var(--danger); }
+
+  /* ===== LOGIN ===== */
+  .login-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(201,150,58,0.2);
+    border-radius: 6px;
+    padding: 28px 24px;
+    text-align: center;
+  }
+
+  .login-icon { font-size: 40px; margin-bottom: 16px; }
+  .login-title { font-size: 20px; color: var(--gold-light); margin-bottom: 4px; }
+  .login-sub { font-size: 12px; color: rgba(253,246,232,0.4); margin-bottom: 24px; letter-spacing: 1px; }
+  .error-msg { color: var(--henna-light); font-size: 13px; margin-top: 8px; display: none; }
+
+  /* ===== ADD GUEST ===== */
+  .add-card {
+    background: rgba(201,150,58,0.05);
+    border: 1px solid rgba(201,150,58,0.2);
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .add-card-title {
+    font-size: 13px;
+    color: var(--gold);
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+  }
+
+  .add-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  /* ===== GUEST LIST ===== */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .stat-box {
+    background: rgba(201,150,58,0.08);
+    border: 1px solid rgba(201,150,58,0.2);
+    border-radius: 4px;
+    padding: 12px 8px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-size: 26px;
+    color: var(--gold-light);
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: rgba(253,246,232,0.4);
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  .guests-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 380px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+  }
+
+  .guest-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(201,150,58,0.1);
+    border-radius: 4px;
+    gap: 10px;
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .guest-info { flex: 1; }
+  .guest-name { font-size: 15px; color: var(--cream); }
+  .guest-phone { font-size: 12px; color: rgba(253,246,232,0.4); direction: ltr; text-align: right; margin-top: 2px; }
+
+  .empty-state {
+    text-align: center;
+    padding: 32px;
+    color: rgba(253,246,232,0.25);
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+
+  .guests-list::-webkit-scrollbar { width: 3px; }
+  .guests-list::-webkit-scrollbar-thumb { background: rgba(201,150,58,0.3); border-radius: 2px; }
+
+
+  /* ===== EDIT MODAL ===== */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 50;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal-card {
+    background: #2d1a08;
+    border: 1px solid rgba(201,150,58,0.3);
+    border-radius: 8px;
+    padding: 24px;
+    width: 100%;
+    max-width: 400px;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .modal-title {
+    font-size: 16px;
+    color: var(--gold-light);
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .btn-edit {
+    background: transparent;
+    border: 1px solid rgba(201,150,58,0.3);
+    color: var(--gold);
+    font-size: 12px;
+    padding: 6px 10px;
+    width: auto;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: 'Noto Serif Hebrew', serif;
+    transition: all 0.2s;
+  }
+  .btn-edit:hover { background: rgba(201,150,58,0.1); }
+  /* ===== EXPORT ===== */
+  .export-card {
+    background: rgba(39,174,96,0.06);
+    border: 1px solid rgba(39,174,96,0.2);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  .export-title { font-size: 14px; color: #a9dfbf; margin-bottom: 6px; }
+  .export-sub { font-size: 12px; color: rgba(253,246,232,0.4); margin-bottom: 14px; }
+
+  /* ===== FINAL CONFIRM ===== */
+  .final-card {
+    background: rgba(122,46,14,0.1);
+    border: 1px solid rgba(122,46,14,0.3);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  .final-title { font-size: 14px; color: var(--henna-light); margin-bottom: 6px; }
+  .final-sub { font-size: 12px; color: rgba(253,246,232,0.4); margin-bottom: 14px; line-height: 1.6; }
+
+  .confirmed-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    background: rgba(39,174,96,0.2);
+    border: 1px solid rgba(39,174,96,0.4);
+    border-radius: 20px;
+    font-size: 12px;
+    color: #a9dfbf;
+    margin-bottom: 16px;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--success);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    z-index: 100;
+    transition: transform 0.3s;
+    white-space: nowrap;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.error-toast { background: var(--danger); }
+
+  .section-title {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--gold);
+    margin-bottom: 10px;
+    opacity: 0.8;
+  }
+
+
+  /* ===== CATEGORY SELECTOR ===== */
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .cat-btn {
+    padding: 10px 6px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(201,150,58,0.25);
+    border-radius: 3px;
+    color: rgba(253,246,232,0.55);
+    font-family: 'Noto Serif Hebrew', serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .cat-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  .cat-btn.selected {
+    background: rgba(201,150,58,0.2);
+    border-color: var(--gold);
+    color: var(--gold-light);
+    font-weight: 600;
+  }
+  .logout-btn {
+    text-align: center;
+    font-size: 11px;
+    color: rgba(253,246,232,0.2);
+    cursor: pointer;
+    margin-top: 16px;
+    letter-spacing: 1px;
+    transition: color 0.2s;
+  }
+  .logout-btn:hover { color: rgba(253,246,232,0.5); }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+
+<div class="container">
+
+  <!-- ===== LOGIN PAGE ===== -->
+  <div class="page active" id="page-login">
+    <div class="app-header">
+      <div class="app-title">ניהול מוזמנים</div>
+      <div class="app-subtitle">חינה | אמרי וליטל חמרי</div>
+    </div>
+    <div class="login-card">
+      <div class="login-icon">🌿</div>
+      <div class="login-title">כניסה למערכת</div>
+      <div class="login-sub">הזן שם וקוד אישי</div>
+      <div class="form-group">
+        <label class="form-label">שם</label>
+        <input class="form-input" id="loginName" type="text" placeholder="הזן את שמך"
+          onkeydown="if(event.key==='Enter') document.getElementById('loginCode').focus()" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">קוד אישי</label>
+        <input class="form-input" id="loginCode" type="password" inputmode="numeric"
+          placeholder="קוד מספרי"
+          onkeydown="if(event.key==='Enter') doLogin()" />
+      </div>
+      <div class="error-msg" id="loginError">❌ שם או קוד שגוי</div>
+      <br>
+      <button class="btn btn-gold" onclick="doLogin()">כניסה ←</button>
+    </div>
+  </div>
+
+  <!-- ===== MAIN PAGE ===== -->
+  <div class="page" id="page-main">
+    <div class="app-header">
+      <div class="app-title">ניהול מוזמנים</div>
+      <div class="app-subtitle">חינה | אמרי וליטל חמרי</div>
+      <div class="user-badge" id="userBadge">👤 שם משתמש</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-num" id="statCount">0</div>
+        <div class="stat-label">מוזמנים</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" id="statFinalized" style="color: #a9dfbf;">—</div>
+        <div class="stat-label">סטטוס</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" id="statAll" style="color: var(--henna-light);">—</div>
+        <div class="stat-label">שמורים</div>
+      </div>
+    </div>
+
+    <!-- Add guest -->
+    <div class="add-card" id="addCard">
+      <div class="add-card-title">➕ הוסף מוזמן</div>
+      <div class="add-row">
+        <div class="form-group" style="margin:0">
+          <label class="form-label">שם מלא</label>
+          <input class="form-input" id="newName" type="text" placeholder="שם המוזמן"
+            onkeydown="if(event.key==='Enter') document.getElementById('newPhone').focus()" />
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">טלפון</label>
+          <input class="form-input" id="newPhone" type="tel" placeholder="05X-XXXXXXX"
+            onkeydown="if(event.key==='Enter') addGuest()" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">קטגוריה (חובה)</label>
+        <div class="cat-grid">
+          <button class="cat-btn" onclick="selectCat('משפחה', this)">👨‍👩‍👧 משפחה</button>
+          <button class="cat-btn" onclick="selectCat('חברים', this)">👫 חברים</button>
+          <button class="cat-btn" onclick="selectCat('עבודה', this)">💼 עבודה</button>
+          <button class="cat-btn" onclick="selectCat('שכנים', this)">🏠 שכנים</button>
+          <button class="cat-btn" onclick="selectCat('אחר', this)">✨ אחר</button>
+        </div>
+      </div>
+      <button class="btn btn-gold" onclick="addGuest()">הוסף ושמור ←</button>
+    </div>
+
+    <!-- Guest list -->
+    <div class="section-title">רשימת מוזמנים</div>
+    <div class="guests-list" id="guestsList">
+      <div class="empty-state">עדיין אין מוזמנים — התחל להוסיף!</div>
+    </div>
+
+    <div class="gold-line"></div>
+
+    <!-- Export -->
+    <div class="export-card" id="exportCard" style="display:none;">
+      <div class="export-title">📥 ייצוא לאקסל</div>
+      <div class="export-sub">הורד את הרשימה שלך כקובץ אקסל</div>
+      <button class="btn btn-success" onclick="exportExcel()">הורד אקסל ←</button>
+    </div>
+
+    <!-- Export all -->
+    <div class="final-card" id="finalCard" style="display:none;">
+      <div class="final-title">📋 ייצוא רשימה מאוחדת</div>
+      <div class="final-sub">מוריד אקסל עם כל המוזמנים מכל המשתמשים,<br>מחולק לפי צד וקטגוריה.</div>
+      <button class="btn btn-henna" onclick="exportAllExcel()">ייצוא רשימה מלאה ←</button>
+    </div>
+
+    <div class="logout-btn" onclick="doLogout()">⬅ יציאה</div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-card">
+    <div class="modal-title">✏️ עריכת מוזמן</div>
+    <div class="form-group">
+      <label class="form-label">שם מלא</label>
+      <input class="form-input" id="editName" type="text" placeholder="שם המוזמן" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">טלפון</label>
+      <input class="form-input" id="editPhone" type="tel" placeholder="05X-XXXXXXX" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">קטגוריה</label>
+      <div class="cat-grid" id="editCatGrid">
+        <button class="cat-btn" onclick="selectEditCat('משפחה', this)">👨‍👩‍👧 משפחה</button>
+        <button class="cat-btn" onclick="selectEditCat('חברים', this)">👫 חברים</button>
+        <button class="cat-btn" onclick="selectEditCat('עבודה', this)">💼 עבודה</button>
+        <button class="cat-btn" onclick="selectEditCat('שכנים', this)">🏠 שכנים</button>
+        <button class="cat-btn" onclick="selectEditCat('אחר', this)">✨ אחר</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeEdit()">ביטול</button>
+      <button class="btn btn-gold" onclick="saveEdit()">שמור ←</button>
+    </div>
+  </div>
+</div>
+<!-- SheetJS for Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, push, onValue, remove, update, set }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAMRwapWhuzScVtatbQhykIGMldgEacndQ",
+    authDomain: "henna-hamri.firebaseapp.com",
+    databaseURL: "https://henna-hamri-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "henna-hamri",
+    storageBucket: "henna-hamri.firebasestorage.app",
+    messagingSenderId: "578518609000",
+    appId: "1:578518609000:web:1726b2dc107a7e716d9fdd"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  window._db = db;
+  window._ref = ref;
+  window._push = push;
+  window._onValue = onValue;
+  window._remove = remove;
+  window._update = update;
+  window._set = set;
+  window._firebaseReady = true;
+  window.dispatchEvent(new Event('firebaseReady'));
+</script>
+
+<script>
+  // ===== USERS =====
+  const USERS = {
+    "אמרי":   { code: "9325", key: "amri",     admin: true },
+    "ליטל":   { code: "7236", key: "lital",    admin: true },
+    "שושי":    { code: "2194", key: "shoshana", admin: false },
+    "שי":     { code: "3509", key: "shai",     admin: false },
+    "דרור":   { code: "2183", key: "dror",     admin: false },
+    "ברכה":   { code: "2184", key: "bracha",   admin: false },
+  };
+  let isAdmin = false;
+  let selectedCat = null;
+  let isFinalized = false; // תמיד false — אין נעילה
+
+  let currentUser = null;
+  let currentKey = null;
+  let guests = {}; // { firebaseId: { name, phone, timestamp } }
+  let allGuestsGlobal = {}; // כל המוזמנים מכל המשתמשים לבדיקת כפילויות
+  let unsubscribe = null;
+
+  // ===== LOGIN =====
+  function doLogin() {
+    const name = document.getElementById('loginName').value.trim();
+    const code = document.getElementById('loginCode').value.trim();
+    const err = document.getElementById('loginError');
+
+    const user = USERS[name];
+    if (user && user.code === code) {
+      err.style.display = 'none';
+      currentUser = name;
+      currentKey = user.key;
+      isAdmin = user.admin === true;
+      document.getElementById('loginCode').value = '';
+      startSession();
+    } else {
+      err.style.display = 'block';
+    }
+  }
+  window.doLogin = doLogin;
+
+  function startSession() {
+    document.getElementById('userBadge').textContent = `👤 ${currentUser}`;
+    showPage('page-main');
+    updateFinalizedUI();
+    loadGuests();
+  }
+
+  function doLogout() {
+    if (unsubscribe) unsubscribe();
+    currentUser = null;
+    currentKey = null;
+    guests = {};
+    isFinalized = false;
+    isAdmin = false;
+    selectedCat = null;
+    document.getElementById('loginName').value = '';
+    document.getElementById('loginCode').value = '';
+    showPage('page-login');
+  }
+  window.doLogout = doLogout;
+
+  // ===== CATEGORY =====
+  function selectCat(cat, btn) {
+    selectedCat = cat;
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  }
+  window.selectCat = selectCat;
+
+  // ===== NAVIGATION =====
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  // ===== FIREBASE =====
+  function loadGuests() {
+    if (!window._firebaseReady) {
+      window.addEventListener('firebaseReady', () => loadGuests(), { once: true });
+      return;
+    }
+
+    // רשימת המשתמש הנוכחי
+    const guestRef = window._ref(window._db, 'guests/' + currentKey);
+    window._onValue(guestRef, (snap) => {
+      guests = snap.val() || {};
+      renderGuests();
+      updateStats();
+      updateFinalizedUI();
+    });
+
+    // כל המוזמנים מכל המשתמשים — לבדיקת כפילויות וייצוא
+    const allRef = window._ref(window._db, 'guests');
+    window._onValue(allRef, (snap) => {
+      allGuestsGlobal = snap.val() || {};
+    });
+  }
+
+  // ===== NORMALIZE PHONE =====
+  function normalizePhone(p) {
+    if (!p) return '';
+    let n = p.replace(/[-\s().+]/g, '');
+    if (n.startsWith('972')) n = '0' + n.slice(3);
+    return n;
+  }
+
+  // ===== ADD GUEST =====
+  async function addGuest() {
+    if (isFinalized) { showToast('הרשימה נסגרה סופית', true); return; }
+    const name = document.getElementById('newName').value.trim();
+    const phone = document.getElementById('newPhone').value.trim();
+    if (!name) { showToast('נא להזין שם', true); return; }
+    if (!selectedCat) { showToast('נא לבחור קטגוריה', true); return; }
+
+    // בדיקת כפילות טלפון בין כל המשתמשים
+    if (phone) {
+      const cleanPhone = normalizePhone(phone);
+      for (const [userKey, userGuests] of Object.entries(allGuestsGlobal)) {
+        if (!userGuests) continue;
+        for (const g of Object.values(userGuests)) {
+          const existingPhone = normalizePhone(g.phone || '');
+          if (existingPhone && existingPhone === cleanPhone) {
+            // מצא את שם המשתמש
+            const ownerName = Object.entries(USERS).find(([n, u]) => u.key === userKey)?.[0] || userKey;
+            const isSameUser = userKey === currentKey;
+            const msg = isSameUser
+              ? `⚠️ הטלפון הזה כבר נוסף ברשימה שלך עבור ${g.name}`
+              : `⚠️ הטלפון הזה כבר נוסף על ידי ${ownerName} עבור ${g.name}`;
+            showToast(msg, true);
+            return;
+          }
+        }
+      }
+    }
+
+    if (!window._firebaseReady) return;
+    const guestRef = window._ref(window._db, `guests/${currentKey}`);
+    await window._push(guestRef, { name, phone, category: selectedCat, timestamp: Date.now() });
+
+    document.getElementById('newName').value = '';
+    document.getElementById('newPhone').value = '';
+    selectedCat = null;
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+    document.getElementById('newName').focus();
+    showToast(`✅ ${name} נוסף!`);
+  }
+  window.addGuest = addGuest;
+
+  // ===== DELETE GUEST =====
+  async function deleteGuest(id) {
+    if (isFinalized) { showToast('הרשימה נסגרה סופית', true); return; }
+    if (!confirm('למחוק מוזמן זה?')) return;
+    const guestRef = window._ref(window._db, `guests/${currentKey}/${id}`);
+    await window._remove(guestRef);
+    showToast('נמחק');
+  }
+  window.deleteGuest = deleteGuest;
+
+  // ===== RENDER =====
+  function renderGuests() {
+    const list = document.getElementById('guestsList');
+    const entries = Object.entries(guests);
+
+    if (entries.length === 0) {
+      list.innerHTML = '<div class="empty-state">עדיין אין מוזמנים — התחל להוסיף!</div>';
+      return;
+    }
+
+    entries.sort((a, b) => (b[1].timestamp || 0) - (a[1].timestamp || 0));
+
+    list.innerHTML = entries.map(([id, g]) => `
+      <div class="guest-item">
+        <div class="guest-info">
+          <div class="guest-name">${g.name}</div>
+          <div class="guest-phone">${g.phone || '—'} ${g.category ? '· ' + g.category : ''}</div>
+        </div>
+        ${!isFinalized ? `
+        <div style="display:flex;gap:6px;">
+          <button class="btn-edit" onclick="openEdit('${id}')">✏️</button>
+          <button class="btn-danger" onclick="deleteGuest('${id}')">מחק</button>
+        </div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  function updateStats() {
+    const count = Object.keys(guests).length;
+    document.getElementById('statCount').textContent = count;
+    document.getElementById('statAll').textContent = count > 0 ? '✓' : '—';
+  }
+
+  function updateFinalizedUI() {
+    const exportCard = document.getElementById('exportCard');
+    if (exportCard) exportCard.style.display = isAdmin ? 'block' : 'none';
+    const finalCard = document.getElementById('finalCard');
+    if (finalCard) finalCard.style.display = isAdmin ? 'block' : 'none';
+    renderGuests();
+  }
+
+  // ===== EXPORT ALL =====
+  function exportAllExcel() {
+    // שמות תצוגה לפי key
+    const keyToName = {
+      amri: 'אמרי', lital: 'ליטל', dror: 'דרור',
+      bracha: 'ברכה', shoshana: 'שושי', shai: 'שי'
+    };
+
+    const rows = [['שם מלא', 'טלפון', 'קטגוריה', 'צד']];
+
+    for (const [userKey, userGuests] of Object.entries(allGuestsGlobal)) {
+      if (!userGuests) continue;
+      const sideName = keyToName[userKey] || userKey;
+      const entries = Object.values(userGuests);
+      entries.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      for (const g of entries) {
+        rows.push([g.name || '', g.phone || '', g.category || '', sideName]);
+      }
+    }
+
+    const totalGuests = rows.length - 1;
+    if (totalGuests === 0) { showToast('אין מוזמנים עדיין בשום רשימה', true); return; }
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{ wch: 25 }, { wch: 18 }, { wch: 12 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'כל המוזמנים');
+    XLSX.writeFile(wb, 'רשימה_מאוחדת_חינה_חמרי.xlsx');
+    showToast(`📥 הורדו ${totalGuests} מוזמנים!`);
+  }
+  window.exportAllExcel = exportAllExcel;
+
+  // ===== EDIT GUEST =====
+  let editingId = null;
+  let editingCat = null;
+
+  function openEdit(id) {
+    const g = guests[id];
+    if (!g) return;
+    editingId = id;
+    editingCat = g.category || null;
+
+    document.getElementById('editName').value = g.name || '';
+    document.getElementById('editPhone').value = g.phone || '';
+
+    // Mark selected category
+    document.querySelectorAll('#editCatGrid .cat-btn').forEach(b => {
+      b.classList.remove('selected');
+      if (b.textContent.includes(editingCat)) b.classList.add('selected');
+    });
+
+    document.getElementById('editModal').classList.add('open');
+  }
+  window.openEdit = openEdit;
+
+  function closeEdit() {
+    editingId = null;
+    editingCat = null;
+    document.getElementById('editModal').classList.remove('open');
+  }
+  window.closeEdit = closeEdit;
+
+  function selectEditCat(cat, btn) {
+    editingCat = cat;
+    document.querySelectorAll('#editCatGrid .cat-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  }
+  window.selectEditCat = selectEditCat;
+
+  async function saveEdit() {
+    if (!editingId) return;
+    const name = document.getElementById('editName').value.trim();
+    const phone = document.getElementById('editPhone').value.trim();
+    if (!name) { showToast('נא להזין שם', true); return; }
+    if (!editingCat) { showToast('נא לבחור קטגוריה', true); return; }
+
+    const guestRef = window._ref(window._db, `guests/${currentKey}/${editingId}`);
+    await window._update(guestRef, { name, phone, category: editingCat });
+    closeEdit();
+    showToast('✅ המוזמן עודכן!');
+  }
+  window.saveEdit = saveEdit;
+
+  // ===== EXPORT EXCEL =====
+  function exportExcel() {
+    const entries = Object.values(guests);
+    if (entries.length === 0) { showToast('אין מוזמנים לייצוא', true); return; }
+
+    entries.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+    const wsData = [
+      [`רשימת מוזמנים של ${currentUser} | חינה אמרי וליטל חמרי`],
+      [],
+      ['שם מלא', 'טלפון'],
+      ...entries.map(g => [g.name, g.phone || ''])
+    ];
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Column widths
+    ws['!cols'] = [{ wch: 25 }, { wch: 18 }];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'מוזמנים');
+    XLSX.writeFile(wb, `מוזמנים_${currentUser}_חינה.xlsx`);
+    showToast('📥 האקסל הורד!');
+  }
+  window.exportExcel = exportExcel;
+
+  // ===== TOAST =====
+  function showToast(msg, isError = false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast' + (isError ? ' error-toast' : '');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  // Login on Enter
+  document.getElementById('loginName').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('loginCode').focus();
+  });
+</script>
+</body>
+</html>
