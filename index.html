@@ -726,6 +726,8 @@
   function normalizePhone(p) {
     if (!p) return '';
     let n = p.replace(/[-\s().+]/g, '');
+    // החלף אות O/o בספרה 0
+    n = n.replace(/[oO]/g, '0');
     if (n.startsWith('972')) n = '0' + n.slice(3);
     return n;
   }
