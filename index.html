@@ -275,6 +275,26 @@
     to { opacity: 1; transform: translateX(0); }
   }
 
+  .search-wrap { position: relative; margin-bottom: 12px; }
+  .search-input { padding-left: 42px; }
+  .search-clear {
+    position: absolute;
+    left: 8px; top: 50%;
+    transform: translateY(-50%);
+    width: 28px; height: 28px;
+    background: rgba(201,150,58,0.15);
+    border: 1px solid rgba(201,150,58,0.3);
+    border-radius: 50%;
+    color: var(--gold-light);
+    font-size: 13px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  .search-clear.show { display: flex; }
+
   .guest-info { flex: 1; }
   .guest-name { font-size: 15px; color: var(--cream); }
   .guest-phone { font-size: 12px; color: rgba(253,246,232,0.4); direction: ltr; text-align: right; margin-top: 2px; }
@@ -533,6 +553,12 @@
 
     <!-- Guest list -->
     <div class="section-title">רשימת מוזמנים</div>
+    <div class="search-wrap">
+      <input class="form-input search-input" id="searchInput" type="text"
+             placeholder="🔍 חיפוש לפי שם או טלפון..." autocomplete="off"
+             oninput="renderGuests()">
+      <button class="search-clear" id="searchClear" onclick="clearSearch()">✕</button>
+    </div>
     <div class="guests-list" id="guestsList">
       <div class="empty-state">עדיין אין מוזמנים — התחל להוסיף!</div>
     </div>
@@ -785,12 +811,44 @@
   window.deleteGuest = deleteGuest;
 
   // ===== RENDER =====
+  function clearSearch() {
+    const input = document.getElementById('searchInput');
+    if (input) input.value = '';
+    renderGuests();
+  }
+
   function renderGuests() {
     const list = document.getElementById('guestsList');
-    const entries = Object.entries(guests);
+    let entries = Object.entries(guests);
 
     if (entries.length === 0) {
       list.innerHTML = '<div class="empty-state">עדיין אין מוזמנים — התחל להוסיף!</div>';
+      const clr = document.getElementById('searchClear');
+      if (clr) clr.classList.remove('show');
+      return;
+    }
+
+    // ===== סינון חכם: ספרות → טלפון, אותיות → שם =====
+    const searchInput = document.getElementById('searchInput');
+    const term = searchInput ? searchInput.value.trim() : '';
+    const clr = document.getElementById('searchClear');
+    if (clr) clr.classList.toggle('show', term.length > 0);
+
+    if (term) {
+      const isDigits = /\d/.test(term) && !/[a-zA-Zא-ת]/.test(term);
+      if (isDigits) {
+        const digits = term.replace(/\D/g, '');
+        entries = entries.filter(([id, g]) =>
+          (g.phone || '').replace(/\D/g, '').includes(digits));
+      } else {
+        const q = term.toLowerCase();
+        entries = entries.filter(([id, g]) =>
+          (g.name || '').toLowerCase().includes(q));
+      }
+    }
+
+    if (entries.length === 0) {
+      list.innerHTML = '<div class="empty-state">לא נמצאו תוצאות לחיפוש</div>';
       return;
     }
 
