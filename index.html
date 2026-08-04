@@ -465,6 +465,14 @@
     transition: color 0.2s;
   }
   .logout-btn:hover { color: rgba(253,246,232,0.5); }
+
+  /* ===== גיבוי ושחזור ===== */
+  .imp-line { font-size:13px; line-height:1.9; }
+  .imp-new  { color:#a9dfbf; }
+  .imp-chg  { color:#f4d03f; }
+  .imp-dim  { color:rgba(253,246,232,0.4); }
+  .imp-sep  { height:1px; background:rgba(212,175,55,0.25); margin:10px 0; }
+  .btn-danger-outline { background:none; border:1px solid rgba(231,76,60,0.5); color:#f1948a; }
 </style>
 </head>
 <body>
@@ -579,6 +587,19 @@
       <button class="btn btn-henna" onclick="exportAllExcel()">ייצוא רשימה מלאה ←</button>
     </div>
 
+    <!-- Backup & Restore -->
+    <div class="export-card" id="backupCard">
+      <div class="export-title">💾 גיבוי ושחזור</div>
+      <div class="export-sub" id="backupSub">טוען...</div>
+      <button class="btn btn-success" onclick="backupAll()">הורד גיבוי מלא ←</button>
+      <button class="btn btn-outline" style="margin-top:8px;" onclick="pickImportFile()">שחזור מקובץ גיבוי</button>
+      <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none;" onchange="handleImportFile(event)" />
+      <div style="font-size:11px;color:rgba(253,246,232,0.35);margin-top:10px;line-height:1.6;">
+        הגיבוי כולל מוזמנים ואישורי הגעה יחד.<br>
+        שמור אותו אצלך — הוא הדרך היחידה לשחזר אם משהו נמחק.
+      </div>
+    </div>
+
     <div class="logout-btn" onclick="doLogout()">⬅ יציאה</div>
   </div>
 
@@ -587,6 +608,22 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal-card">
+    <div class="modal-title">📂 שחזור מקובץ</div>
+    <div id="importSummary" style="margin:10px 0 16px;"></div>
+    <div style="font-size:11px;color:rgba(253,246,232,0.4);margin-bottom:12px;line-height:1.6;">
+      גיבוי של המצב הנוכחי יורד אוטומטית לפני כל שחזור.
+    </div>
+    <button class="btn btn-success" onclick="applyImport('new')">הוסף רק חדשים</button>
+    <button class="btn btn-henna" style="margin-top:8px;" onclick="applyImport('update')">הוסף חדשים ועדכן קיימים</button>
+    <button class="btn btn-danger-outline" style="margin-top:8px;" onclick="applyImport('replace')">מחק הכל וטען מחדש</button>
+    <button class="btn btn-outline" style="margin-top:8px;"
+      onclick="document.getElementById('importModal').classList.remove('open')">ביטול</button>
+  </div>
+</div>
 
 <!-- Edit Modal -->
 <div class="modal-overlay" id="editModal">
@@ -991,6 +1028,215 @@
     showToast('📥 האקסל הורד!');
   }
   window.exportExcel = exportExcel;
+
+  // ===== גיבוי ושחזור =====
+  // גיבוי = קובץ אקסל עם שני גיליונות: מוזמנים + אישורי הגעה.
+  // עמודת "מזהה" היא הקריטית — היא מאפשרת שחזור לאותו מפתח בדיוק,
+  // כך שקישורים אישיים שכבר נשלחו ממשיכים לעבוד.
+
+  const RESTORE_PASSWORD = "5555";
+  let allRsvp    = {};   // henna_rsvp — נטען חי
+  let importData = null; // תוצאת קריאת קובץ שממתינה לאישור
+
+  function loadRsvpForBackup() {
+    if (!window._firebaseReady) {
+      window.addEventListener('firebaseReady', loadRsvpForBackup, { once: true });
+      return;
+    }
+    window._onValue(window._ref(window._db, 'henna_rsvp'), (snap) => {
+      allRsvp = snap.val() || {};
+      const el = document.getElementById('backupSub');
+      if (el) {
+        const guestCount = Object.values(allGuestsGlobal || {})
+          .reduce((s, side) => s + Object.keys(side || {}).length, 0);
+        el.innerHTML = `${guestCount} מוזמנים · ${Object.keys(allRsvp).length} אישורי הגעה`;
+      }
+    });
+  }
+
+  const SIDE_LABEL = { amri:'אמרי', lital:'ליטל', dror:'דרור',
+                       bracha:'ברכה', shoshana:'שושי', shai:'שי' };
+
+  // ===== ייצוא גיבוי מלא =====
+  function backupAll(silent) {
+    const guestRows = [['מזהה', 'צד', 'שם מלא', 'טלפון', 'קטגוריה', 'חותמת']];
+    for (const [sideKey, list] of Object.entries(allGuestsGlobal || {})) {
+      if (!list) continue;
+      for (const [id, g] of Object.entries(list)) {
+        if (!g || !g.name) continue;
+        guestRows.push([id, sideKey, g.name, g.phone || '',
+                        g.category || '', g.timestamp || '']);
+      }
+    }
+
+    const rsvpRows = [['מפתח', 'מזהה מוזמן', 'שם', 'טלפון', 'מגיע', 'כמות', 'חותמת']];
+    for (const [key, r] of Object.entries(allRsvp || {})) {
+      if (!r) continue;
+      rsvpRows.push([key, r.guestId || '', r.name || '', r.phone || '',
+                     r.attending ? 'כן' : 'לא', r.guests || 0, r.timestamp || '']);
+    }
+
+    if (guestRows.length === 1 && rsvpRows.length === 1) {
+      if (!silent) showToast('אין נתונים לגיבוי', true);
+      return false;
+    }
+
+    const wb = XLSX.utils.book_new();
+    const ws1 = XLSX.utils.aoa_to_sheet(guestRows);
+    ws1['!cols'] = [{wch:22},{wch:12},{wch:25},{wch:16},{wch:12},{wch:16}];
+    XLSX.utils.book_append_sheet(wb, ws1, 'מוזמנים');
+
+    const ws2 = XLSX.utils.aoa_to_sheet(rsvpRows);
+    ws2['!cols'] = [{wch:26},{wch:26},{wch:25},{wch:16},{wch:8},{wch:8},{wch:16}];
+    XLSX.utils.book_append_sheet(wb, ws2, 'אישורים');
+
+    const d = new Date();
+    const stamp = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
+    XLSX.writeFile(wb, `גיבוי_חינה_${stamp}.xlsx`);
+    if (!silent) showToast('💾 הגיבוי הורד!');
+    return true;
+  }
+  window.backupAll = backupAll;
+
+  // ===== קריאת קובץ לשחזור =====
+  function pickImportFile() { document.getElementById('importFile').click(); }
+  window.pickImportFile = pickImportFile;
+
+  function handleImportFile(ev) {
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = '';
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        const gSheet = wb.Sheets['מוזמנים'];
+        const rSheet = wb.Sheets['אישורים'];
+        if (!gSheet) { showToast('לא נמצא גיליון "מוזמנים" בקובץ', true); return; }
+
+        const gRows = XLSX.utils.sheet_to_json(gSheet, { header: 1 });
+        const rRows = rSheet ? XLSX.utils.sheet_to_json(rSheet, { header: 1 }) : [];
+
+        const guestsIn = [];
+        for (let i = 1; i < gRows.length; i++) {
+          const r = gRows[i] || [];
+          const id = String(r[0] || '').trim();
+          const side = String(r[1] || '').trim();
+          const name = String(r[2] || '').trim();
+          if (!id || !side || !name) continue;
+          guestsIn.push({ id, side, name,
+            phone: String(r[3] || '').trim(),
+            category: String(r[4] || '').trim() || 'אחר',
+            timestamp: Number(r[5]) || Date.now() });
+        }
+
+        const rsvpIn = [];
+        for (let i = 1; i < rRows.length; i++) {
+          const r = rRows[i] || [];
+          const key = String(r[0] || '').trim();
+          if (!key) continue;
+          rsvpIn.push({ key, guestId: String(r[1] || '').trim(),
+            name: String(r[2] || '').trim(), phone: String(r[3] || '').trim(),
+            attending: String(r[4] || '').trim() === 'כן',
+            guests: Number(r[5]) || 0, timestamp: Number(r[6]) || Date.now() });
+        }
+
+        if (!guestsIn.length && !rsvpIn.length) {
+          showToast('לא נמצאו רשומות תקינות בקובץ', true); return;
+        }
+        analyzeImport(guestsIn, rsvpIn);
+      } catch (err) {
+        showToast('שגיאה בקריאת הקובץ', true);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+  window.handleImportFile = handleImportFile;
+
+  // ===== ניתוח לפני שינוי =====
+  function analyzeImport(guestsIn, rsvpIn) {
+    let gNew = 0, gSame = 0, gChanged = 0;
+    for (const g of guestsIn) {
+      const cur = (allGuestsGlobal[g.side] || {})[g.id];
+      if (!cur) { gNew++; continue; }
+      const same = (cur.name || '') === g.name &&
+                   (cur.phone || '') === g.phone &&
+                   (cur.category || '') === g.category;
+      same ? gSame++ : gChanged++;
+    }
+    let rNew = 0, rExist = 0;
+    for (const r of rsvpIn) (allRsvp[r.key] ? rExist++ : rNew++);
+
+    importData = { guestsIn, rsvpIn };
+
+    document.getElementById('importSummary').innerHTML = `
+      <div class="imp-line"><b>מוזמנים בקובץ:</b> ${guestsIn.length}</div>
+      <div class="imp-line imp-new">חדשים שיתווספו: ${gNew}</div>
+      <div class="imp-line imp-chg">קיימים עם שינוי: ${gChanged}</div>
+      <div class="imp-line imp-dim">קיימים וזהים: ${gSame}</div>
+      <div class="imp-sep"></div>
+      <div class="imp-line"><b>אישורי הגעה בקובץ:</b> ${rsvpIn.length}</div>
+      <div class="imp-line imp-new">חדשים: ${rNew}</div>
+      <div class="imp-line imp-dim">קיימים: ${rExist}</div>`;
+
+    document.getElementById('importModal').classList.add('open');
+  }
+
+  // ===== ביצוע השחזור =====
+  async function applyImport(mode) {
+    if (!importData) return;
+    if (!window._firebaseReady) { showToast('אין חיבור', true); return; }
+
+    if (mode === 'replace') {
+      const pwd = prompt('⚠️ מצב זה מוחק את כל המוזמנים והאישורים הקיימים\nוטוען את הקובץ במקומם.\n\nהקלד סיסמה כדי להמשיך:');
+      if (pwd !== RESTORE_PASSWORD) { if (pwd !== null) showToast('סיסמה שגויה', true); return; }
+    }
+
+    // גיבוי אוטומטי של המצב הנוכחי לפני כל שינוי
+    backupAll(true);
+
+    const btns = document.querySelectorAll('#importModal .btn');
+    btns.forEach(b => b.disabled = true);
+    showToast('משחזר...');
+
+    try {
+      const { guestsIn, rsvpIn } = importData;
+
+      if (mode === 'replace') {
+        await window._set(window._ref(window._db, 'guests'), null);
+        await window._set(window._ref(window._db, 'henna_rsvp'), null);
+      }
+
+      for (const g of guestsIn) {
+        const exists = (allGuestsGlobal[g.side] || {})[g.id];
+        if (mode === 'new' && exists) continue;
+        await window._set(window._ref(window._db, `guests/${g.side}/${g.id}`), {
+          name: g.name, phone: g.phone,
+          category: g.category, timestamp: g.timestamp
+        });
+      }
+
+      for (const r of rsvpIn) {
+        if (mode === 'new' && allRsvp[r.key]) continue;
+        const rec = { name: r.name, phone: r.phone, attending: r.attending,
+                      guests: r.guests, timestamp: r.timestamp };
+        if (r.guestId) rec.guestId = r.guestId;
+        await window._set(window._ref(window._db, 'henna_rsvp/' + r.key), rec);
+      }
+
+      document.getElementById('importModal').classList.remove('open');
+      showToast('✅ השחזור הושלם');
+    } catch (e) {
+      showToast('שגיאה בשחזור', true);
+    } finally {
+      btns.forEach(b => b.disabled = false);
+      importData = null;
+    }
+  }
+  window.applyImport = applyImport;
+
+  loadRsvpForBackup();
 
   // ===== TOAST =====
   function showToast(msg, isError = false) {
