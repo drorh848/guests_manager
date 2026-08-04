@@ -1045,13 +1045,30 @@
     }
     window._onValue(window._ref(window._db, 'henna_rsvp'), (snap) => {
       allRsvp = snap.val() || {};
-      const el = document.getElementById('backupSub');
-      if (el) {
-        const guestCount = Object.values(allGuestsGlobal || {})
-          .reduce((s, side) => s + Object.keys(side || {}).length, 0);
-        el.innerHTML = `${guestCount} מוזמנים · ${Object.keys(allRsvp).length} אישורי הגעה`;
-      }
+      updateBackupSummary();
     });
+
+    // גם כשרשימת המוזמנים מתעדכנת — הסיכום מתרענן
+    window._onValue(window._ref(window._db, 'guests'), () => {
+      setTimeout(updateBackupSummary, 0);
+    });
+  }
+
+  // סיכום חי: כמה מוזמנים וכמה אישורים יש כרגע
+  function updateBackupSummary() {
+    const el = document.getElementById('backupSub');
+    if (!el) return;
+    let guestCount = 0;
+    for (const side of Object.values(allGuestsGlobal || {})) {
+      if (!side) continue;
+      for (const g of Object.values(side)) if (g && g.name) guestCount++;
+    }
+    const rsvpCount = Object.keys(allRsvp || {}).length;
+    const coming = Object.values(allRsvp || {})
+      .filter(r => r && r.attending)
+      .reduce((s, r) => s + (r.guests || 0), 0);
+    el.innerHTML = `<b>${guestCount}</b> מוזמנים · <b>${rsvpCount}</b> אישורי הגעה`
+      + (coming ? `<br><span style="font-size:11px;opacity:.65;">${coming} אנשים אישרו הגעה</span>` : '');
   }
 
   const SIDE_LABEL = { amri:'אמרי', lital:'ליטל', dror:'דרור',
